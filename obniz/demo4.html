@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <img id="image">
+    <div> <input type="file" id="uploader">
+        </div>
+    <pre></pre>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+        var KEY = 'AIzaSyA_gWTxMAIbrceKkibKsHNK2uOKUlaqi94'
+        var url = 'https://vision.googleapis.com/v1/images:annotate?key='
+        var api_url = url + KEY
+        $("#uploader").change(function(evt) {
+            getImageInfo(evt);
+        })
+        //画像ファイルを読み込み、APIを利用するためのURLを組み立てる
+        function getImageInfo(evt) {
+            //アップロードされた画像をFileListオブジェクトとして読み込む
+            var file = evt.target.files;
+            var reader = new FileReader();
+            //読み込んだ結果を保持する変数
+            var dataUrl = "";
+            reader.readAsDataURL(file[0]);
+            //読み込みが終わったら、次の処理を呼び出す
+            reader.onload = function() {
+                dataUrl = reader.result;
+                document.getElementById("image").src = " + dataUrl + ";
+                makeRequest(dataUrl, getAPIInfo);
+            }
+        }
+        //APIへのリクエストに組み込むJsonの組み立て
+        function makeRequest(dataUrl, callback) {
+            var end = dataUrl.indexOf(",")
+            var request = "{'requests': [{'image': {'content': '" + dataUrl.slice(end + 1) + "'},'features': [{'type': 'LABEL_DETECTION','maxResults': 10,}]}]}"
+            callback(request)
+        }
+        //通信を行う
+        function getAPIInfo(request) {
+            $.ajax({
+                url: api_url,
+                type: 'POST',
+                async: true,
+                cashe: false,
+                data: request,
+                dataType: 'json',
+                contentType: 'application/json',
+            }).done(function(result) {
+                showResult(result);
+            }).fail(function(result) {
+                alert('failed to load the info');
+            });
+        }
+        //得られた結果を画面に表示する
+        function showResult(result) {
+            //ラベル検出結果の表示
+            for (var i = 0; i < result.responses[0].labelAnnotations.length; i++) {
+                console.log(result.responses[0].labelAnnotations[i].description)
+            }
+
+        }
+
+    </script>
+</body>
+
+</html>

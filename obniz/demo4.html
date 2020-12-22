@@ -1,53 +1,48 @@
-<!DOCTYPE html>
+<!-- HTML Example -->
 <html>
 
 <head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
+	<script src="https://unpkg.com/obniz@latest/obniz.js"></script>
 </head>
 
 <body>
-    <img id="image">
-    <div> <input type="file" id="uploader">
-    </div>
-    <pre></pre>
 
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
-    <script>
-        var KEY = 'AIzaSyA_gWTxMAIbrceKkibKsHNK2uOKUlaqi94'
+	<div id="obniz-debug"></div>
+	<img id="image">
+
+	<script>
+		var obniz = new Obniz("obnizID");
+obniz.onconnect = async function () {
+// obniz.io11.output(true);
+// var cam = obniz.wired("ArduCAMMini", { cs:0, mosi:1, miso:2, sclk:3, gnd:4, vcc:5, sda:6, scl:7 ,spi_frequency:100000,module_version : 1 });
+var cam = obniz.wired("ArduCAMMini", { cs:0, mosi:1, miso:2, sclk:3,gnd:4,sda:6, scl:7 ,spi_frequency:100000 ,module_version : 1 });
+var led = obniz.wired("LED", {anode:9, cathode:10});
+led.on();
+await cam.startupWait();
+const data = await cam.takeWait('1024x768');
+console.log("image size = " + data.length + " bytes");
+
+var base64 = cam.arrayToBase64(data);
+document.getElementById("image").src = "data:image/jpeg;base64, " + base64;
+      //google api
+      var KEY = 'google cloud api key'
         var url = 'https://vision.googleapis.com/v1/images:annotate?key='
         var api_url = url + KEY
 
-        var url = 'https://api.line.me/v2/bot/message/push'
-        var access_token = 'sxhPZnJT5z7+eTd1694GpgzaRqWWmv+TOqSPc4aGVF6iU7hX2wNmy3+56Qd92UXIwV9iulFxiw+v0QRzAbOGbGtYJ2Wv5Gzk2LjbuOOkjfHqkWAZF/T+No2oHgNkDtQGS1Lnz5rjIhzgic5E+SY1AAdB04t89/1O/w1cDnyilFU='
-        var to = 'U04b8ee795aead826164b1da7fa99d270'
-
-
-
-        $("#uploader").change(function(evt) {
-            getImageInfo(evt);
-        })
-        //画像ファイルを読み込み、APIを利用するためのURLを組み立てる
-        function getImageInfo(evt) {
-            //アップロードされた画像をFileListオブジェクトとして読み込む
-            var file = evt.target.files;
-            var reader = new FileReader();
-            //読み込んだ結果を保持する変数
-            var dataUrl = "";
-            reader.readAsDataURL(file[0]);
-            //読み込みが終わったら、次の処理を呼び出す
-            reader.onload = function() {
-                dataUrl = reader.result;
-                document.getElementById("image").src = " + dataUrl + ";
-                makeRequest(dataUrl, getAPIInfo);
-            }
+      var url='https://maker.ifttt.com/trigger/event/with/key/apikey'
+      
+        if(await cam.isCaptureDoneWait()==true){
+          makeRequest(base64, getAPIInfo);
+          led.off();
         }
+            
         //APIへのリクエストに組み込むJsonの組み立て
-        function makeRequest(dataUrl, callback) {
-            var end = dataUrl.indexOf(",")
-            var request = "{'requests': [{'image': {'content': '" + dataUrl.slice(end + 1) + "'},'features': [{'type': 'LABEL_DETECTION','maxResults': 10,}]}]}"
-            callback(request)
+        function makeRequest(base64, getAPIInfo) {
+            var request = "{'requests': [{'image': {'content': '" + base64 + "'},'features': [{'type': 'LABEL_DETECTION','maxResults': 5,}]}]}"
+            getAPIInfo(request);
         }
         //通信を行う
         function getAPIInfo(request) {
@@ -71,42 +66,25 @@
             for (var i = 0; i < result.responses[0].labelAnnotations.length; i++) {
                 console.log(result.responses[0].labelAnnotations[i].description)
             }
-
-        }
-        push();
-        //実際にメッセージを送信する関数を作成します。
-        function push() {
-                        axios({
-                            method: 'get', // 固定
-                            url: 'https://apiproxy.now.sh', // 固定
-                            params: {
-                                apiproxy_key: 'ojkojk', // 固定
-                                url: url, // 使いたいAPIのURL
-                                method: 'POST', // GETのみ対応
-
-                                // 以下、本来のAPIのパラメータ
-                                 params: {to: to,
-                            messages: [{
-                                type: 'text',
-                                text: 'text',
-                            }]},
-                                
-                                headers: {
-                                    'Content-Type': 'application/json; charset=UTF-8',
-                                    'Authorization': `Bearer ${access_token}`
-                                },
-                            }
-                        }).then(response => {
-                            console.log(response);
-                        }).catch(err => {
-                            console.log(err);
-                        });
+             $.post(url, {
+               'base64': 'data:image/jpeg;base64',
+               'value1':result.responses[0].labelAnnotations[0].description,
+               'value2':result.responses[0].labelAnnotations[1].description,
+               'value3':result.responses[0].labelAnnotations[2].description,
+             }).done(function (ret) {
+                console.dir(ret);
+            });
+          }
+          
+        
+}
 
 
-                    };
+ 
+
         
 
-    </script>
+	</script>
 </body>
 
 </html>
